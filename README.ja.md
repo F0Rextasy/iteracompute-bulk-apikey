@@ -26,6 +26,7 @@
 [![License](https://img.shields.io/badge/license-MIT-6ea8fe?style=for-the-badge)](LICENSE)
 [![Models](https://img.shields.io/badge/models-31%20served-412991?style=for-the-badge)](https://api.iteracompute.com/v1/models)
 [![9Router](https://img.shields.io/badge/9Router-connector-8B5CF6?style=for-the-badge)](#-connect-to-9router)
+[![OmniRoute](https://img.shields.io/badge/OmniRoute-connector-8B5CF6?style=for-the-badge)](#-connect-to-omniroute)
 [![X](https://img.shields.io/badge/X-%40bigbullapp-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/bigbullapp)
 
 [🛠 クイックスタート](#-quick-start) · [🎁 無料枠](#-free-tier--how-much-you-get) · [🤖 モデル](#-models--all-31-of-them) · [🧪 API の使い方](#-how-to-use-the-api) · [✅ 検証済み](#-verified-working--every-key-is-tested) · [🧭 仕組み](#-how-it-works) · [🔌 9Router](#-connect-to-9router) · [⚙️ オプション](#️-cli-options) · [🛰️ プロキシ](#️-behind-a-proxy) · [🐞 イシュー](#-issues)
@@ -191,6 +192,15 @@ node public-cli.js --connect-9router --base http://localhost:20128 --password 12
 
 デフォルト: `--prefix iteracompute`、`--base-url https://api.iteracompute.com/v1`、`--model qwen/qwen3.8-27b`。モデルは `iteracompute/qwen3.8-27b` として提供されます。
 
+## 🔌 OmniRoute に接続する
+
+[OmniRoute](https://omniroute.online) はセルフホスト型の OpenAI 互換ルーターです:
+
+```bash
+node public-cli.js --connect-omniroute --base http://localhost:20128 --password 123456
+```
+
+デフォルト: `--prefix iteracompute`、`--base-url https://api.iteracompute.com/v1`、`--model qwen/qwen3.8-27b`。モデルは `iteracompute/qwen3.8-27b` として提供されます。
 ## 🔑 1 つのキーで得られるもの
 
 | | |
