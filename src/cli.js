@@ -381,7 +381,6 @@ async function solveTurnstile(cdp, ctx, proxy, { rounds = 10, gapMs = 4500 } = {
   const target = await cdp.send('Target.createTarget', { url: 'about:blank', browserContextId: ctx.browserContextId });
   const { sessionId } = await cdp.send('Target.attachToTarget', { targetId: target.targetId, flatten: true });
   await cdp.send('Page.enable', {}, sessionId);
-  await cdp.send('Runtime.enable', {}, sessionId);
   const loaded = new Promise((r) => { cdp.on('Page.loadEventFired', r, sessionId); setTimeout(r, 30000); });
   await cdp.send('Page.navigate', { url: `${SITE}/sign-up` }, sessionId);
   await loaded;
