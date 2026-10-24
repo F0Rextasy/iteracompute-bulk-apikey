@@ -80,6 +80,7 @@ const MODEL = arg('model', 'qwen/qwen3.8-27b');
 const ALT_MODELS = arg('alt-models', 'moonshotai/kimi-k3-free').split(',').map((s) => s.trim()).filter(Boolean);
 const GAP_MS = Math.max(0, parseInt(arg('gap', '3000'), 10) || 0);
 const EXITS = Math.max(1, parseInt(arg('exits', '6'), 10) || 6);
+const AUTO = has('auto');
 const VERIFY_ONLY = has('verify-only');
 const SCREEN = has('screen');
 const CONNECT_ROUTER = has('connect-9router');
