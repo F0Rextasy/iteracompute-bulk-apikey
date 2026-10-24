@@ -63,6 +63,7 @@ iteracompute-bulk-apikey — IteraCompute (platform.iteracompute.com) free-tier 
 
 Options
   --pool FILE     exit list, one proxy per line (default proxies.txt, env ITERACOMPUTE_PROXIES)
+  --brand RE      sender/subject fence for the confirmation mail (default iteracompute)
   --model ID      model used for the chat gate (default qwen/qwen3.8-27b)
   --headless      run the captcha browser headless (Turnstile answers error 600* — not recommended)
   --chrome PATH   Chrome binary
@@ -112,6 +113,8 @@ async function screen(exits) {
 }
 
 // ------------------------------------------------------------------- mail
+/** Sender/subject fence for the panel's confirmation mail (`--brand RE`). */
+const BRAND = new RegExp(arg('brand', 'iteracompute|auth\\.iteracompute'), 'i');
 /** Fresh temp.tf Microsoft-family mailbox (outlook/hotmail plus-alias). */
 async function newMailbox(proxy) {
   const q = new URLSearchParams({ providers: 'outlook,hotmail', dot: '0', plus: '1' }).toString();
@@ -136,7 +139,7 @@ async function waitVerifyLink(proxy, address, { timeoutMs = 300000, pollMs = 500
       seen.add(id);
       const from = String(m.from || m.sender || '');
       const subject = String(m.subject || '');
-      if (!/iteracompute|auth\.iteracompute/i.test(from + ' ' + subject)) continue;
+      if (!BRAND.test(from + ' ' + subject)) continue;
       const blob = [m.html, m.htmlBody, m.text, m.body, m.plain, m.snippet].filter(Boolean).map(String).join(' ');
       const urls = [...blob.matchAll(/https?:\/\/[^\s"'<>)]+/g)].map((x) => x[0].replace(/&amp;/g, '&').replace(/[.,)]+$/, ''));
       const link = urls.find((h) => /\/verify-email\?token=/.test(h));
@@ -152,14 +155,19 @@ async function waitVerifyLink(proxy, address, { timeoutMs = 300000, pollMs = 500
 function apiCallExpr(pathname, body) {
   return `(async () => {
     try { await (window.iteraAttribution && window.iteraAttribution.ready); } catch (e) {}
-    const c = document.cookie.split('; ').find((x) => /iteracompute_csrf=/.test(x));
+    const c = ['iteracompute_csrf', '__Host-iteracompute_csrf'].map((n) => document.cookie.split('; ').find((x) => x.startsWith(n + '='))).find(Boolean);
     const headers = { accept: 'application/json' };
     if (c) headers['X-CSRF-Token'] = decodeURIComponent(c.split('=').slice(1).join('='));
+    // The console sends an Idempotency-Key on every mutating call; api-keys 400s without one.
+    headers['Idempotency-Key'] = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
     const opt = { method: 'POST', headers, credentials: 'same-origin' };
     const payload = ${JSON.stringify(body)};
     if (payload) { headers['content-type'] = 'application/json'; opt.body = JSON.stringify(payload); }
     const r = await fetch('/api/control${pathname}', opt);
-    return JSON.stringify({ status: r.status, body: (await r.text()).slice(0, 900) });
+    const txt = await r.text();
+    let secret = null;
+    try { const j = JSON.parse(txt); secret = (j && (j.secret || (j.key && j.key.secret))) || null; } catch (e) {}
+    return JSON.stringify({ status: r.status, body: txt.slice(0, 900), secret });
   })()`;
 }
 
@@ -210,9 +218,11 @@ async function mintOne(cdp, proxy, n) {
     if (login.status >= 300) throw new Error(`login ${login.status}: ${login.body.slice(0, 120)}`);
     const created = JSON.parse(await tab.evalIn(apiCallExpr('/v1/api-keys', { display_name: `itera-${n}` }), true));
     if (created.status >= 300) throw new Error(`key ${created.status}: ${created.body.slice(0, 120)}`);
-    const m = created.body.match(/"(?:key|secret|api_key|token|value)"\s*:\s*"([^"]{20,})"/i);
-    if (!m) throw new Error('no key in create response');
-    return { email, password, key: m[1], mail: { id: mail.id, subject: mail.subject }, register: reg.status, verify: ver.status, login: login.status };
+    // The plaintext rides in `secret` (the console reads `data.secret`); the 900-char
+    // body preview stops before it, so read the parsed field first.
+    const key = created.secret || (created.body.match(/"(?:key|secret|api_key|token|value)"\s*:\s*"([^"]{20,})"/i) || [])[1];
+    if (!key) throw new Error('no key in create response');
+    return { email, password, key, mail: { id: mail.id, subject: mail.subject }, register: reg.status, verify: ver.status, login: login.status, create: created.status };
   } finally {
     try { await cdp.send('Target.closeTarget', { targetId: tab.targetId }); } catch {}
     try { await cdp.send('Target.disposeBrowserContext', { browserContextId: ctx.browserContextId }); } catch {}
@@ -230,13 +240,14 @@ async function mint(exits) {
   log(`  chrome cdp ready (${HEADLESS ? 'headless — Turnstile may answer 600*' : 'visible window'})`);
   let ok = 0;
   try {
-    for (let n = readKeys().length + 1; n < readKeys().length + 1 + COUNT; n++) {
+    const base = readKeys().length;   // --count kadar dön: her turda dosyayı YENİDEN okumak (appendKey ile büyüyen) sınırı kaydırıp COUNT'tan fazla key üretiyordu (ölçüldü: --count 1 → 2 key)
+    for (let n = base + 1; n <= base + COUNT; n++) {
       let last = null;
       for (let t = 1; t <= TRIES; t++) {
         try {
           const rec = await mintOne(cdp, key, n);
           const gate = await chatGate(key, rec.key);
-          log(`  #${n} ${rec.email} -> key ${rec.key.slice(0, 10)}… gate=${gate.gate} (${gate.status})`);
+          log(`  #${n} ${rec.email} -> key ${rec.key.slice(0, 10)}… create=${rec.create} gate=${gate.gate} (${gate.status})`);
           if (gate.gate !== 'PASS') { last = new Error('chat gate ' + gate.gate); break; }
           appendKey(rec.key);
           recordAccount({ provider: 'iteracompute', host: 'platform.iteracompute.com', ...rec, model: MODEL, base_url: API_BASE, exit: key ? key.line : null, chat200: { status: gate.status, content: gate.content, total_tokens: gate.usage && gate.usage.total_tokens, at: new Date().toISOString() } });

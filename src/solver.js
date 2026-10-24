@@ -137,9 +137,14 @@ function connectThrough(proxy, host, port, timeoutMs) {
 /** One HTTPS request through one exit (or directly when proxy is null). */
 async function exitFetch(proxy, url, { method = 'GET', headers = {}, body = null, timeoutMs = TIMEOUT_MS, cookieJar = null } = {}) {
   const u = new URL(url);
-  const raw = proxy ? await connectThrough(proxy, u.hostname, u.port || 443, timeoutMs) : await directConnect(u.hostname, u.port || 443, timeoutMs);
-  const sock = tls.connect({ socket: raw, servername: u.hostname });
-  await new Promise((res, rej) => { sock.once('secureConnect', res); sock.once('error', rej); });
+  // Only an https target gets a TLS layer: Chrome's own CDP endpoint is plain
+  // http on loopback, and tls.connect to it dies on the IP servername (that is
+  // what "Chrome did not expose CDP" actually was).
+  const secure = u.protocol === 'https:';
+  const port = u.port || (secure ? 443 : 80);
+  const raw = proxy ? await connectThrough(proxy, u.hostname, port, timeoutMs) : await directConnect(u.hostname, port, timeoutMs);
+  const sock = secure ? tls.connect({ socket: raw, servername: u.hostname }) : raw;
+  if (secure) await new Promise((res, rej) => { sock.once('secureConnect', res); sock.once('error', rej); });
   const all = { 'user-agent': UA, accept: '*/*', ...headers };
   if (cookieJar && cookieJar.header()) all.cookie = cookieJar.header();
   return new Promise((resolve, reject) => {
