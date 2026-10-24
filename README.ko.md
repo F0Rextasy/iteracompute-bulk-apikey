@@ -163,7 +163,7 @@ node public-cli.js --help
 | `--model ID` | `qwen/qwen3.8-27b` | 채팅 관문에 사용되는 모델 |
 | `--headless` | 꺼짐 | 캡차 브라우저를 헤드리스로 실행(Turnstile은 그러면 error 600 응답 — 검증 표 참조) |
 | `--chrome PATH` · `ITERACOMPUTE_CHROME` | 자동 감지 | Chrome 바이너리 |
-| `--gap MS` · `--tries N` · `--timeout MS` | 3000 · 2 · 60000 | 페이싱 및 재시도 |
+| `--gap MS` · `--exits N` · `--timeout MS` | 3000 · 6 · 60000 | 페이싱 및 재시도 |
 
 계정은 의도적으로 **직렬로** 생성됩니다: 챌린지는 하나의 보이는 창을 요구하고, 패널의 메일러는 `202`보다 뒤처질 수 있습니다.
 

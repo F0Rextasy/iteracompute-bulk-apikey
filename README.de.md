@@ -163,7 +163,7 @@ node public-cli.js --help
 | `--model ID` | `qwen/qwen3.8-27b` | Modell, das für das Chat-Gate verwendet wird |
 | `--headless` | aus | den Captcha-Browser headless ausführen (Turnstile antwortet dann mit Fehler 600 — siehe verifizierte Tabelle) |
 | `--chrome PATH` · `ITERACOMPUTE_CHROME` | automatische Erkennung | Chrome-Binary |
-| `--gap MS` · `--tries N` · `--timeout MS` | 3000 · 2 · 60000 | Taktung und Wiederholungen |
+| `--gap MS` · `--exits N` · `--timeout MS` | 3000 · 6 · 60000 | Taktung und Wiederholungen |
 
 Konten werden absichtlich **seriell** erstellt: Die Challenge will ein sichtbares Fenster, und der Mailer des Panels kann hinter dem `202` zurückbleiben.
 

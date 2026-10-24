@@ -166,7 +166,7 @@ node public-cli.js --help
 | `--model ID` | `qwen/qwen3.8-27b` | model used for the chat gate |
 | `--headless` | off | run the captcha browser headless (Turnstile then answers error 600 — see the verified table) |
 | `--chrome PATH` · `ITERACOMPUTE_CHROME` | auto-detect | Chrome binary |
-| `--gap MS` · `--tries N` · `--timeout MS` | 3000 · 2 · 60000 | pacing and retries |
+| `--gap MS` · `--exits N` · `--timeout MS` | 3000 · 6 · 60000 | pacing and retries |
 
 Accounts are minted **serially** on purpose: the challenge wants one visible window, and the panel's mailer can lag behind the `202`.
 

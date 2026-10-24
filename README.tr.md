@@ -163,7 +163,7 @@ node public-cli.js --help
 | `--model ID` | `qwen/qwen3.8-27b` | sohbet kapısı için kullanılan model |
 | `--headless` | kapalı | captcha tarayıcısını headless çalıştır (Turnstile ardından error 600 yanıtı verir — doğrulama tablosuna bakın) |
 | `--chrome PATH` · `ITERACOMPUTE_CHROME` | otomatik algıla | Chrome ikili dosyası |
-| `--gap MS` · `--tries N` · `--timeout MS` | 3000 · 2 · 60000 | tempo ve yeniden denemeler |
+| `--gap MS` · `--exits N` · `--timeout MS` | 3000 · 6 · 60000 | tempo ve yeniden denemeler |
 
 Hesaplar kasıtlı olarak **seri** oluşturulur: challenge tek bir görünür pencere ister ve panelin posta göndericisi `202`'nin gerisinde kalabilir.
 

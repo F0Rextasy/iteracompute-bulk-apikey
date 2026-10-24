@@ -163,7 +163,7 @@ node public-cli.js --help
 | `--model ID` | `qwen/qwen3.8-27b` | modèle utilisé pour la barrière de chat |
 | `--headless` | désactivé | exécuter le navigateur du captcha en mode headless (Turnstile répond alors erreur 600 — voir le tableau vérifié) |
 | `--chrome PATH` · `ITERACOMPUTE_CHROME` | auto-détection | binaire Chrome |
-| `--gap MS` · `--tries N` · `--timeout MS` | 3000 · 2 · 60000 | cadencement et tentatives |
+| `--gap MS` · `--exits N` · `--timeout MS` | 3000 · 6 · 60000 | cadencement et tentatives |
 
 Les comptes sont créés **sériellement** à dessein : le challenge veut une fenêtre visible, et le mailer du panneau peut prendre du retard sur le `202`.
 

@@ -68,7 +68,7 @@ Options
   --headless      run the captcha browser headless (Turnstile answers error 600* — not recommended)
   --chrome PATH   Chrome binary
   --gap MS        pause between accounts (default 3000)
-  --tries N       attempts per account (default 2)
+  --exits N       exits tried per account (default 6)
   --timeout MS    per-request timeout (default 60000)
   --help
 `);
@@ -79,7 +79,7 @@ const COUNT = Math.max(1, parseInt(arg('count', '5'), 10) || 5);
 const MODEL = arg('model', 'qwen/qwen3.8-27b');
 const ALT_MODELS = arg('alt-models', 'moonshotai/kimi-k3-free').split(',').map((s) => s.trim()).filter(Boolean);
 const GAP_MS = Math.max(0, parseInt(arg('gap', '3000'), 10) || 0);
-const TRIES = Math.max(1, parseInt(arg('tries', '2'), 10) || 2);
+const EXITS = Math.max(1, parseInt(arg('exits', '6'), 10) || 6);
 const VERIFY_ONLY = has('verify-only');
 const SCREEN = has('screen');
 const CONNECT_ROUTER = has('connect-9router');
@@ -95,6 +95,15 @@ function loadExits() {
   const list = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#')).map(parseProxy).filter(Boolean);
   return list.length ? list : null;
 }
+/** A dead exit, not a panel verdict — the flow rotates to the next candidate. */
+const isExitError = (e) =>
+  /proxy connect failed|proxy CONNECT refused|proxy timeout|connect timeout|connect failed|ETIMEDOUT|ECONNREFUSED|ECONNRESET|ECONNABORTED|EPIPE|ENETUNREACH|EHOSTUNREACH|EAI_AGAIN|socket hang up|secureConnect|TLS|handshake/i.test(
+    String((e && e.message) || e),
+  );
+
+/** `host:port` of the exit in play, or `direct` when the pool is empty. */
+const exitLabel = (e) => (e ? `${e.host}:${e.port}` : 'direct');
+
 
 async function screen(exits) {
   const live = [];
@@ -233,39 +242,51 @@ async function mint(exits) {
   const mode = exits ? `pool of ${exits.length}` : 'NO proxy (direct)';
   log(`mint ${COUNT} account(s) · model ${MODEL} · ${mode}`);
   if (!exits) log('WARNING: running WITHOUT a proxy — the panel sees this machine directly.');
-  const key = exits ? exits[0] : null;
+  const routes = exits ? EXITS : 1;
   const port = 9300 + Math.floor(Math.random() * 300);
   const chrome = await launchChrome(port);
   const cdp = await new CDP(chrome.wsUrl).connect();
   log(`  chrome cdp ready (${HEADLESS ? 'headless — Turnstile may answer 600*' : 'visible window'})`);
   let ok = 0;
+  let transportDead = 0;
   try {
     const base = readKeys().length;   // --count kadar dön: her turda dosyayı YENİDEN okumak (appendKey ile büyüyen) sınırı kaydırıp COUNT'tan fazla key üretiyordu (ölçüldü: --count 1 → 2 key)
     for (let n = base + 1; n <= base + COUNT; n++) {
       let last = null;
-      for (let t = 1; t <= TRIES; t++) {
+      let lastWasExit = false;
+      for (let a = 0; a < routes; a++) {
+        const exit = exits ? exits[(n + a) % exits.length] : null;
+        lastWasExit = false;
         try {
-          const rec = await mintOne(cdp, key, n);
-          const gate = await chatGate(key, rec.key);
+          const rec = await mintOne(cdp, exit, n);
+          const gate = await chatGate(exit, rec.key);
           log(`  #${n} ${rec.email} -> key ${rec.key.slice(0, 10)}… create=${rec.create} gate=${gate.gate} (${gate.status})`);
           if (gate.gate !== 'PASS') { last = new Error('chat gate ' + gate.gate); break; }
           appendKey(rec.key);
-          recordAccount({ provider: 'iteracompute', host: 'platform.iteracompute.com', ...rec, model: MODEL, base_url: API_BASE, exit: key ? key.line : null, chat200: { status: gate.status, content: gate.content, total_tokens: gate.usage && gate.usage.total_tokens, at: new Date().toISOString() } });
+          recordAccount({ provider: 'iteracompute', host: 'platform.iteracompute.com', ...rec, model: MODEL, base_url: API_BASE, exit: exit ? exit.line : null, chat200: { status: gate.status, content: gate.content, total_tokens: gate.usage && gate.usage.total_tokens, at: new Date().toISOString() } });
           ok++;
           last = null;
           break;
         } catch (e) {
           last = e;
-          log(`  #${n} retry ${t}/${TRIES}: ${e.message}`);
+          lastWasExit = isExitError(e);
+          if (lastWasExit) log(`  #${n} exit ${a + 1}/${routes} ${exitLabel(exit)} dead (${String(e.message).slice(0, 70)}) → next exit`);
+          else log(`  #${n} retry ${a + 1}/${routes}: ${e.message}`);
           await sleep(3000);
         }
       }
+      if (lastWasExit) transportDead++;
       if (last) log(`  #${n} FAILED: ${last.message}`);
       await sleep(GAP_MS);
     }
   } finally {
     try { cdp.close(); } catch {}
     try { if (!HEADLESS) process.kill(-chrome.child.pid) || chrome.child.kill(); } catch { try { chrome.child.kill(); } catch {} }
+  }
+  if (!ok && transportDead === COUNT) {
+    const route = exits ? `${exits.length}-exit pool` : 'direct mode (no proxy list)';
+    console.error(`[fatal] no usable route — ${COUNT} account(s) × ${routes} candidate(s) over ${route}: every attempt died at the transport layer.`);
+    process.exit(1);
   }
   log(`done: ${ok}/${COUNT} keys minted and chat-verified -> ${KEYS_FILE}`);
 }

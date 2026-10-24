@@ -163,7 +163,7 @@ node public-cli.js --help
 | `--model ID` | `qwen/qwen3.8-27b` | 用于聊天关卡的模型 |
 | `--headless` | 关闭 | 以无头模式运行验证码浏览器（Turnstile 随后返回 error 600 — 见已验证表格） |
 | `--chrome PATH` · `ITERACOMPUTE_CHROME` | 自动检测 | Chrome 二进制文件 |
-| `--gap MS` · `--tries N` · `--timeout MS` | 3000 · 2 · 60000 | 节奏控制和重试 |
+| `--gap MS` · `--exits N` · `--timeout MS` | 3000 · 6 · 60000 | 节奏控制和重试 |
 
 账户是**串行**创建的，这是有意为之：挑战需要一个可见窗口，而且面板的邮件发送器可能滞后于 `202`。
 

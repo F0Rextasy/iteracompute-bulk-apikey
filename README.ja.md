@@ -163,7 +163,7 @@ node public-cli.js --help
 | `--model ID` | `qwen/qwen3.8-27b` | チャット関門で使用するモデル |
 | `--headless` | オフ | キャプチャ用ブラウザをヘッドレスで実行（その場合 Turnstile は error 600 を返します — 検証済みテーブルを参照） |
 | `--chrome PATH` · `ITERACOMPUTE_CHROME` | 自動検出 | Chrome バイナリ |
-| `--gap MS` · `--tries N` · `--timeout MS` | 3000 · 2 · 60000 | ペーシングとリトライ |
+| `--gap MS` · `--exits N` · `--timeout MS` | 3000 · 6 · 60000 | ペーシングとリトライ |
 
 アカウントは意図的に**直列**で作成されます。チャレンジは 1 つの表示ウィンドウを必要とし、パネルのメーラーは `202` に遅れることがあるためです。
 
